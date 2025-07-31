@@ -1,0 +1,56 @@
+﻿@page "/create-order"
+@inject _08.WebClient1.Services.OrderApiService OrderService
+@inject _08.WebClient1.State.OrderState State
+
+<h3>Create Order</h3>
+
+<div>
+    <label>Customer ID:</label>
+    <input @bind="CustomerIdString" />
+</div>
+
+<table class="table">
+    <thead>
+        <tr><th>Product ID</th><th>Quantity</th></tr>
+    </thead>
+    <tbody>
+        @for (int i = 0; i < Items.Count; i++)
+        {
+            <tr>
+                <td><input type="number" @bind="Items[i].ProductId" /></td>
+                <td><input type="number" @bind="Items[i].Quantity" /></td>
+            </tr>
+        }
+    </tbody>
+</table>
+<button class="btn btn-secondary" @onclick="AddLine">Add Product</button>
+<button class="btn btn-primary" @onclick="SubmitOrder">Submit Order</button>
+
+@if (CreatedOrderId != null)
+{
+    <div class="alert alert-success mt-2">
+        Order created: <strong>@CreatedOrderId</strong>
+        <br />
+        <a href="/view-quotes">Proceed to Quotes</a>
+    </div>
+}
+
+@code {
+    private string CustomerIdString { get; set; } = Guid.NewGuid().ToString();
+    private List<_01.Contracts.Models.OrderItemDto> Items { get; set; } = new() { new() { ProductId = 1, Quantity = 1 } };
+    private Guid? CreatedOrderId;
+
+    private void AddLine() => Items.Add(new _01.Contracts.Models.OrderItemDto { ProductId = 0, Quantity = 1 });
+
+    private async Task SubmitOrder()
+    {
+        if (!Guid.TryParse(CustomerIdString, out var customerId)) return;
+        var orderId = await OrderService.CreateOrderAsync(customerId, Items.ToArray());
+        if (orderId != null)
+        {
+            CreatedOrderId = orderId;
+            State.OrderId = orderId;
+            State.CustomerId = customerId;
+        }
+    }
+}

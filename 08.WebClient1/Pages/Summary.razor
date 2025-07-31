@@ -1,0 +1,35 @@
+﻿@page "/summary"
+@inject _08.WebClient1.State.OrderState State
+
+<h3>Order Summary</h3>
+
+@if (State.Summary == null)
+{
+    <div class="alert alert-warning">Summary not available yet.</div>
+}
+else
+{
+    <div>
+        <p><strong>Order ID:</strong> @State.Summary.OrderId</p>
+        <p><strong>Customer ID:</strong> @State.Summary.CustomerId</p>
+        <p><strong>Status:</strong> @State.Summary.Status</p>
+        <p><strong>Total Cost:</strong> @State.Summary.TotalCost.ToString("C")</p>
+        <p><strong>Estimated Delivery:</strong> @State.Summary.EstimatedDeliveryDays days</p>
+    </div>
+
+    <h5>Selections</h5>
+    <table class="table">
+        <thead><tr><th>Product</th><th>Distributor</th><th>Qty</th><th>UnitPrice</th></tr></thead>
+        <tbody>
+            @foreach (var s in State.Summary.Selections)
+            {
+                <tr>
+                    <td>@s.ProductId</td>
+                    <td>@s.Distributor</td>
+                    <td>@s.QuantityChosen</td>
+                    <td>@s.UnitPrice.ToString("C")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

@@ -1,0 +1,6 @@
+@_03.QuotationService_HostAddress = http://localhost:5146
+
+GET {{_03.QuotationService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,6 @@
+@_05.ComparisonService_HostAddress = http://localhost:5147
+
+GET {{_05.ComparisonService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
