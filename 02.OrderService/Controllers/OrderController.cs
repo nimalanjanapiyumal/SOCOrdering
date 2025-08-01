@@ -3,7 +3,6 @@ using _01.Contracts.Models;
 using _01.Contracts.Repositories;
 using _02.OrderService.Clients;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
@@ -19,13 +18,6 @@ namespace _02.OrderService.Controllers
         private readonly IMessageBus _bus;
         private readonly ILogger<OrderController> _logger;
         private readonly IQuotationClient _quotationClient;
-
-        public OrderController(IOrderRepository repo, IMessageBus bus, ILogger<OrderController> logger)
-        {
-            _repo = repo;
-            _bus = bus;
-            _logger = logger;
-        }
 
         public OrderController(IOrderRepository repo, IMessageBus bus, ILogger<OrderController> logger, IQuotationClient quotationClient)
         {

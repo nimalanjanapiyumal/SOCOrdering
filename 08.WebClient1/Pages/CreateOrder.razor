@@ -1,6 +1,5 @@
 ﻿@page "/create-order"
 @inject _08.WebClient1.Services.OrderApiService OrderService
-@inject _08.WebClient1.State.OrderState State
 
 <h3>Create Order</h3>
 
@@ -49,8 +48,6 @@
         if (orderId != null)
         {
             CreatedOrderId = orderId;
-            State.OrderId = orderId;
-            State.CustomerId = customerId;
         }
     }
 }
