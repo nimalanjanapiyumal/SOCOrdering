@@ -17,13 +17,14 @@ namespace _03.QuotationService.Controllers
         }
 
         [HttpPost("request")]
-        public async Task<IActionResult> RequestQuotes([FromBody] QuoteRequestDto request)
+        public async Task<ActionResult<IEnumerable<QuotationResultDto>>> RequestQuotes([FromBody] QuoteRequestDto request)
         {
             if (request == null || request.Items == null || !request.Items.Any())
                 return BadRequest("Invalid request payload.");
 
             // Simulate three distributors providing quotes for the actual OrderId
             var distributors = new[] { "TechWorld", "ElectroCom", "GadgetCentral" };
+            var createdQuotes = new List<Quotation>();
             foreach (var dist in distributors)
             {
                 var quote = new Quotation
@@ -39,9 +40,23 @@ namespace _03.QuotationService.Controllers
                     }).ToList()
                 };
                 await _repo.AddAsync(quote);
+                createdQuotes.Add(quote);
             }
 
-            return Accepted();
+            var result = createdQuotes.Select(q => new QuotationResultDto
+            {
+                OrderId = q.OrderId,
+                Distributor = q.Distributor,
+                EstimatedDays = q.EstimatedDays,
+                Items = q.Items.Select(i => new QuotationItemResultDto
+                {
+                    ProductId = i.ProductId,
+                    UnitPrice = i.UnitPrice,
+                    Available = i.Available
+                })
+            });
+
+            return Ok(result);
         }
 
         [HttpGet("{orderId:guid}")]

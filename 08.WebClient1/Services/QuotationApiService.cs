@@ -12,14 +12,17 @@ namespace _08.WebClient1.Services
             _http = http;
         }
 
-        public async Task RequestQuotesAsync(Guid orderId, IEnumerable<OrderItemDto> items)
+        public async Task<IEnumerable<QuotationResultDto>> RequestQuotesAsync(Guid orderId, IEnumerable<OrderItemDto> items)
         {
             var request = new QuoteRequestDto
             {
                 OrderId = orderId,
                 Items = items
             };
-            await _http.PostAsJsonAsync("api/quotations/request", request);
+            var resp = await _http.PostAsJsonAsync("api/quotations/request", request);
+            if (!resp.IsSuccessStatusCode) return Array.Empty<QuotationResultDto>();
+            return await resp.Content.ReadFromJsonAsync<IEnumerable<QuotationResultDto>>()
+                ?? Array.Empty<QuotationResultDto>();
         }
 
         public async Task<IEnumerable<QuotationResultDto>> GetQuotesAsync(Guid orderId)

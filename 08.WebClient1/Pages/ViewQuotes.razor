@@ -63,16 +63,8 @@ else
 
         if (!quotes.Any())
         {
-            // Trigger quotation generation
-            await QuoteService.RequestQuotesAsync(State.OrderId.Value, State.OrderItems);
-
-            // Poll the service for a short period until quotations are available
-            const int maxAttempts = 5;
-            for (int attempt = 0; attempt < maxAttempts && !quotes.Any(); attempt++)
-            {
-                await Task.Delay(1000);
-                quotes = await QuoteService.GetQuotesAsync(State.OrderId.Value);
-            }
+            // Trigger quotation generation and immediately capture the results
+            quotes = await QuoteService.RequestQuotesAsync(State.OrderId.Value, State.OrderItems);
         }
 
         State.Quotations = quotes;
