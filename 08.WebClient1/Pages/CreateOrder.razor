@@ -1,5 +1,8 @@
-﻿@page "/create-order"
+﻿
+@page "/create-order"
 @inject _08.WebClient1.Services.OrderApiService OrderService
+@inject _08.WebClient1.State.OrderState State
+@inject NavigationManager Nav
 
 <h3>Create Order</h3>
 
@@ -10,14 +13,21 @@
 
 <table class="table">
     <thead>
-        <tr><th>Product ID</th><th>Quantity</th></tr>
+        <tr><th>Product</th><th>Quantity</th></tr>
     </thead>
     <tbody>
         @for (int i = 0; i < Items.Count; i++)
         {
             <tr>
-                <td><input type="number" @bind="Items[i].ProductId" /></td>
-                <td><input type="number" @bind="Items[i].Quantity" /></td>
+                <td>
+                    <select @bind="Items[i].ProductId" class="form-select">
+                        @foreach (var p in Products)
+                        {
+                            <option value="@p.Id">@p.Name</option>
+                        }
+                    </select>
+                </td>
+                <td><input type="number" @bind="Items[i].Quantity" class="form-control" /></td>
             </tr>
         }
     </tbody>
@@ -25,21 +35,34 @@
 <button class="btn btn-secondary" @onclick="AddLine">Add Product</button>
 <button class="btn btn-primary" @onclick="SubmitOrder">Submit Order</button>
 
-@if (CreatedOrderId != null)
-{
-    <div class="alert alert-success mt-2">
-        Order created: <strong>@CreatedOrderId</strong>
-        <br />
-        <a href="/view-quotes">Proceed to Quotes</a>
-    </div>
-}
-
 @code {
     private string CustomerIdString { get; set; } = Guid.NewGuid().ToString();
     private List<_01.Contracts.Models.OrderItemDto> Items { get; set; } = new() { new() { ProductId = 1, Quantity = 1 } };
-    private Guid? CreatedOrderId;
+    private List<Product> Products { get; set; } = new()
+    {
+        new(1, "Laptop Pro 15"),
+        new(2, "Smartphone X"),
+        new(3, "Wireless Mouse"),
+        new(4, "Mechanical Keyboard"),
+        new(5, "HD Monitor 24"),
+        new(6, "USB-C Hub"),
+        new(7, "External SSD 1TB"),
+        new(8, "Bluetooth Speaker"),
+        new(9, "Noise-Cancelling Headphones"),
+        new(10, "Gaming Chair"),
+        new(11, "Webcam HD"),
+        new(12, "Portable Charger"),
+        new(13, "Smartwatch S5"),
+        new(14, "Graphic Tablet"),
+        new(15, "4K Action Camera"),
+        new(16, "VR Headset"),
+        new(17, "Drone QuadX"),
+        new(18, "3D Printer Mini"),
+        new(19, "WiFi Router AX"),
+        new(20, "Smart Home Hub")
+    };
 
-    private void AddLine() => Items.Add(new _01.Contracts.Models.OrderItemDto { ProductId = 0, Quantity = 1 });
+    private void AddLine() => Items.Add(new _01.Contracts.Models.OrderItemDto { ProductId = Products[0].Id, Quantity = 1 });
 
     private async Task SubmitOrder()
     {
@@ -47,7 +70,11 @@
         var orderId = await OrderService.CreateOrderAsync(customerId, Items.ToArray());
         if (orderId != null)
         {
-            CreatedOrderId = orderId;
+            State.OrderId = orderId.Value;
+            State.CustomerId = customerId;
+            Nav.NavigateTo("/view-quotes");
         }
     }
+
+    private record Product(int Id, string Name);
 }

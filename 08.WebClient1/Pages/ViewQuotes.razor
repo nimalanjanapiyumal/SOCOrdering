@@ -1,6 +1,7 @@
-﻿@page "/view-quotes"
+﻿
+@page "/view-quotes"
 @inject _08.WebClient1.Services.QuotationApiService QuoteService
-@inject WebClient1.State.OrderState State
+@inject _08.WebClient1.State.OrderState State
 @inject NavigationManager Nav
 
 <h3>Quotations</h3>
@@ -11,7 +12,6 @@
 }
 else
 {
-    <button class="btn btn-primary" @onclick="LoadQuotes">Load Quotations</button>
 
     @if (State.Quotations != null && State.Quotations.Any())
     {
@@ -42,9 +42,18 @@ else
             <button class="btn btn-success" @onclick="GoCompare">Compare & Select</button>
         </div>
     }
+    else
+    {
+        <div class="mt-3"><em>No quotations available yet.</em></div>
+    }
 }
 
 @code {
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadQuotes();
+    }
+
     private async Task LoadQuotes()
     {
         if (State.OrderId == null) return;
