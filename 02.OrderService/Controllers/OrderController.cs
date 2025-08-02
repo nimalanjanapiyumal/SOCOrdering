@@ -1,41 +1,66 @@
 ﻿using _01.Contracts.Messaging;
+using _01.Contracts.Models;
 using _01.Contracts.Repositories;
 using _02.OrderService.Clients;
-using _02.OrderService.Controllers;
-using _02.OrderService.Data;
-using _02.OrderService.Messaging;
-using _02.OrderService.Repositories;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
-var builder = WebApplication.CreateBuilder(args);
-
-// DbContext
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-builder.Services.AddHttpClient<IQuotationClient, QuotationClient>(client =>
+namespace _02.OrderService.Controllers
 {
-    client.BaseAddress = new Uri("https://localhost:5002/"); // adjust to actual QuotationService URL/port
-});
+    [ApiController]
+    [Route("api/orders")]
+    public class OrderController : ControllerBase
+    {
+        private readonly IOrderRepository _repo;
+        private readonly IMessageBus _bus;
+        private readonly ILogger<OrderController> _logger;
+        private readonly IQuotationClient _quotationClient;
 
-builder.Services.AddHttpClient<IComparisonClient, ComparisonClient>(client =>
-{
-    client.BaseAddress = new Uri("https://localhost:5003/"); // adjust to actual ComparisonService URL/port
-});
+        public OrderController(IOrderRepository repo, IMessageBus bus, ILogger<OrderController> logger, IQuotationClient quotationClient)
+        {
+            _repo = repo;
+            _bus = bus;
+            _logger = logger;
+            _quotationClient = quotationClient;
+        }
 
-// Repository
-builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] OrderCreateDto dto)
+        {
+            if (dto == null || dto.Items == null || !dto.Items.Any())
+                return BadRequest("Order must contain at least one item.");
 
-// Message bus (in-memory stub)
-builder.Services.AddSingleton<IMessageBus, InMemoryMessageBus>();
+            var orderId = await _repo.CreateOrderAsync(dto.CustomerId, dto.Items);
 
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+            await _bus.PublishAsync("QuotationRequested", new
+            {
+                OrderId = orderId,
+                Items = dto.Items.Select(i => new { i.ProductId, i.Quantity })
+            });
 
-var app = builder.Build();
-if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
-app.UseHttpsRedirection();
-app.UseAuthorization();
-app.MapControllers();
-app.Run();
+            var quoteRequest = new QuoteRequestDto
+            {
+                OrderId = orderId,
+                Items = dto.Items
+            };
+            await _quotationClient.RequestQuotesAsync(quoteRequest);
+
+            _logger.LogInformation("Created order {OrderId} and published QuotationRequested event.", orderId);
+
+            return CreatedAtAction(nameof(Get), new { id = orderId }, new { orderId });
+        }
+
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> Get(Guid id)
+        {
+            var order = await _repo.GetOrderAsync(id);
+            if (order == null)
+                return NotFound();
+
+            return Ok(order);
+        }
+    }
+}

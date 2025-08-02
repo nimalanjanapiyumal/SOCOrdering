@@ -33,16 +33,4 @@ namespace _02.OrderService.Clients
             return await resp.Content.ReadFromJsonAsync<IEnumerable<QuotationResultDto>>();
         }
     }
-
-    public static class HttpClientFactory
-    {
-        public static HttpClient Create()
-        {
-            var handler = new HttpClientHandler();
-            handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-            var client = new HttpClient(handler) { BaseAddress = new Uri("https://localhost:5002/") };
-            // Use this client for your requests
-            return client;
-        }
-    }
 }

@@ -1,161 +1,53 @@
 ﻿@page "/create-order"
 @inject _08.WebClient1.Services.OrderApiService OrderService
-@inject _08.WebClient1.State.OrderState State
 
 <h3>Create Order</h3>
 
-@if (!AvailableProducts.Any())
-{
-    <div class="alert alert-info">Loading products...</div>
-}
-else
-{
-    <div class="mb-4">
-        <h4>Available Products</h4>
-        <div class="row row-cols-1 row-cols-md-3 g-4">
-            @foreach (var product in AvailableProducts)
-            {
-                <div class="col">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">@product.Name</h5>
-                            <p class="card-text">@product.Description</p>
-                            <p class="card-text">
-                                <small class="text-muted">
-                                    Base Price: $@product.BasePrice<br/>
-                                    Max Order: @product.MaxOrderQuantity
-                                </small>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
+<div>
+    <label>Customer ID:</label>
+    <input @bind="CustomerIdString" />
+</div>
 
-    <h4>Your Order</h4>
-    <div>
-        <label>Customer ID:</label>
-        <input @bind="CustomerIdString" />
-    </div>
-
-    <table class="table mt-3">
-        <thead>
+<table class="table">
+    <thead>
+        <tr><th>Product ID</th><th>Quantity</th></tr>
+    </thead>
+    <tbody>
+        @for (int i = 0; i < Items.Count; i++)
+        {
             <tr>
-                <th>Product</th>
-                <th>Base Price</th>
-                <th>Quantity</th>
-                <th>Actions</th>
+                <td><input type="number" @bind="Items[i].ProductId" /></td>
+                <td><input type="number" @bind="Items[i].Quantity" /></td>
             </tr>
-        </thead>
-        <tbody>
-            @for (int i = 0; i < Items.Count; i++)
-            {
-                var index = i;
-                <tr>
-                    <td>
-                        <select @bind="Items[index].ProductId">
-                            <option value="0">-- Select Product --</option>
-                            @foreach (var product in AvailableProducts)
-                            {
-                                <option value="@product.ProductId">@product.Name ($@product.BasePrice)</option>
-                            }
-                        </select>
-                    </td>
-                    <td>
-                        @(AvailableProducts.FirstOrDefault(p => p.ProductId == Items[index].ProductId)?.BasePrice ?? 0)
-                    </td>
-                    <td>
-                        <input type="number" @bind="Items[index].Quantity" min="1" 
-                               max="@(AvailableProducts.FirstOrDefault(p => p.ProductId == Items[index].ProductId)?.MaxOrderQuantity ?? 999)" />
-                    </td>
-                    <td>
-                        @if (Items.Count > 1)
-                        {
-                            <button class="btn btn-sm btn-danger" @onclick="@(() => RemoveLine(index))">Remove</button>
-                        }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+        }
+    </tbody>
+</table>
+<button class="btn btn-secondary" @onclick="AddLine">Add Product</button>
+<button class="btn btn-primary" @onclick="SubmitOrder">Submit Order</button>
 
-    <div class="mb-3">
-        <button class="btn btn-secondary" @onclick="AddLine">Add Product</button>
-        <button class="btn btn-primary" @onclick="SubmitOrder">Checkout</button>
+@if (CreatedOrderId != null)
+{
+    <div class="alert alert-success mt-2">
+        Order created: <strong>@CreatedOrderId</strong>
+        <br />
+        <a href="/view-quotes">Proceed to Quotes</a>
     </div>
-
-    @if (CreatedOrderId != null)
-    {
-        <div class="alert alert-success mt-2">
-            Order created: <strong>@CreatedOrderId</strong>
-            <br />
-            <a href="/view-quotes">Proceed to Quotes</a>
-        </div>
-    }
 }
 
 @code {
     private string CustomerIdString { get; set; } = Guid.NewGuid().ToString();
-    private List<_01.Contracts.Models.OrderItemDto> Items { get; set; } = new() { new() { ProductId = 0, Quantity = 1 } };
+    private List<_01.Contracts.Models.OrderItemDto> Items { get; set; } = new() { new() { ProductId = 1, Quantity = 1 } };
     private Guid? CreatedOrderId;
-    private List<_01.Contracts.Models.ProductDto> AvailableProducts { get; set; } = new();
 
-    protected override async Task OnInitializedAsync()
-    {
-        AvailableProducts = await OrderService.GetAvailableProductsAsync();
-        if (AvailableProducts.Count < 20)
-        {
-            AvailableProducts = Enumerable.Range(1, 20)
-                .Select(i => new _01.Contracts.Models.ProductDto
-                {
-                    ProductId = i,
-                    Name = $"Gadget {i}",
-                    Description = $"Description for Gadget {i}",
-                    BasePrice = 10.0m + i,
-                    MaxOrderQuantity = 10
-                }).ToList();
-        }
-    }
-
-    private void AddLine()
-    {
-        Items.Add(new _01.Contracts.Models.OrderItemDto { ProductId = 0, Quantity = 1 });
-    }
-
-    private void RemoveLine(int index)
-    {
-        if (Items.Count > 1)
-        {
-            Items.RemoveAt(index);
-        }
-    }
+    private void AddLine() => Items.Add(new _01.Contracts.Models.OrderItemDto { ProductId = 0, Quantity = 1 });
 
     private async Task SubmitOrder()
     {
-        if (!Guid.TryParse(CustomerIdString, out var customerId))
-        {
-            CreatedOrderId = null;
-            return;
-        }
-
-        if (Items == null || !Items.Any() || Items.Any(i => i.ProductId == 0 || i.Quantity < 1))
-        {
-            CreatedOrderId = null;
-            return;
-        }
-
+        if (!Guid.TryParse(CustomerIdString, out var customerId)) return;
         var orderId = await OrderService.CreateOrderAsync(customerId, Items.ToArray());
         if (orderId != null)
         {
             CreatedOrderId = orderId;
-            // Store order info in shared state for downstream pages
-            State.OrderId = orderId;
-            State.CustomerId = customerId;
-        }
-        else
-        {
-            CreatedOrderId = null;
         }
     }
 }

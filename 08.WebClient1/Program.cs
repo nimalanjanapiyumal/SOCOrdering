@@ -21,17 +21,8 @@ if (string.IsNullOrEmpty(serviceConfig["OrderService"]))
 }
 
 // HttpClients
-builder.Services.AddScoped<_08.WebClient1.Services.OrderApiService>(sp =>
-{
-    var client = new HttpClient { BaseAddress = new Uri(serviceConfig["OrderService"]) };
-    return new _08.WebClient1.Services.OrderApiService(client);
-});
-
-builder.Services.AddScoped<ProductApiService>(sp =>
-{
-    var client = new HttpClient { BaseAddress = new Uri(serviceConfig["ProductService"]) };
-    return new ProductApiService(client);
-});
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(serviceConfig["OrderService"]) });
+builder.Services.AddScoped<_08.WebClient1.Services.OrderApiService>(); // uses OrderService client internally
 
 builder.Services.AddScoped<QuotationApiService>(sp =>
 {
@@ -51,5 +42,13 @@ builder.Services.AddScoped<NotificationApiService>(sp =>
 
 // Shared state
 builder.Services.AddSingleton<OrderState>();
+
+// Add this to ensure each API service gets its own HttpClient with the correct BaseAddress
+builder.Services.AddScoped<_08.WebClient1.Services.OrderApiService>(sp =>
+{
+    var config = builder.Configuration.GetSection("Services");
+    var client = new HttpClient { BaseAddress = new Uri(config["OrderService"]) };
+    return new _08.WebClient1.Services.OrderApiService(client);
+});
 
 await builder.Build().RunAsync();
