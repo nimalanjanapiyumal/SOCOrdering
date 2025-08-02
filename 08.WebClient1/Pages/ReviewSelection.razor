@@ -1,8 +1,8 @@
 ﻿
 @page "/review-selection"
 @using _01.Contracts.Models
+@using System.Collections.Generic
 @using System.Linq
-@inject _08.WebClient1.Services.QuotationApiService QuoteService
 @inject _08.WebClient1.State.OrderState State
 @inject NavigationManager Nav
 
@@ -59,7 +59,30 @@ else
         if (State.OrderId == null) return;
         if (State.Quotations == null || !State.Quotations.Any())
         {
-            var quotes = await QuoteService.GetQuotesAsync(State.OrderId.Value);
+            var distributors = new[] { "TechWorld", "ElectroCom", "GadgetCentral" };
+            var quotes = new List<QuotationResultDto>();
+            var quoteId = 1;
+            foreach (var dist in distributors)
+            {
+                var q = new QuotationResultDto
+                {
+                    QuoteId = quoteId,
+                    OrderId = State.OrderId.Value,
+                    Distributor = dist,
+                    EstimatedDays = dist == "TechWorld" ? 3 : dist == "ElectroCom" ? 4 : 5,
+                    CreatedAt = DateTime.UtcNow,
+                    Items = State.OrderItems.Select((it, idx) => new QuotationItemResultDto
+                    {
+                        QuotationItemId = idx + 1,
+                        QuotationId = quoteId,
+                        ProductId = it.ProductId,
+                        UnitPrice = 100 + it.ProductId + (dist == "ElectroCom" ? -5 : 0),
+                        Available = 10
+                    }).ToList()
+                };
+                quotes.Add(q);
+                quoteId++;
+            }
             State.Quotations = quotes;
         }
         options = State.Quotations.Select(q => new VendorOption

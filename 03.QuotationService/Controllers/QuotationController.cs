@@ -2,6 +2,7 @@
 using _03.QuotationService.Entities;
 using _03.QuotationService.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 
 namespace _03.QuotationService.Controllers
 {
@@ -21,6 +22,7 @@ namespace _03.QuotationService.Controllers
         {
             if (request == null || request.Items == null || !request.Items.Any())
                 return BadRequest("Invalid request payload.");
+
 
             // Simulate three distributors providing quotes for the actual OrderId
             var distributors = new[] { "TechWorld", "ElectroCom", "GadgetCentral" };
@@ -45,11 +47,15 @@ namespace _03.QuotationService.Controllers
 
             var result = createdQuotes.Select(q => new QuotationResultDto
             {
+                QuoteId = q.QuoteId,
                 OrderId = q.OrderId,
                 Distributor = q.Distributor,
                 EstimatedDays = q.EstimatedDays,
+                CreatedAt = q.CreatedAt,
                 Items = q.Items.Select(i => new QuotationItemResultDto
                 {
+                    QuotationItemId = i.QuotationItemId,
+                    QuotationId = i.QuotationId,
                     ProductId = i.ProductId,
                     UnitPrice = i.UnitPrice,
                     Available = i.Available
@@ -65,11 +71,15 @@ namespace _03.QuotationService.Controllers
             var quotes = await _repo.GetByOrderAsync(orderId);
             return Ok(quotes.Select(q => new QuotationResultDto
             {
+                QuoteId = q.QuoteId,
                 OrderId = q.OrderId,
                 Distributor = q.Distributor,
                 EstimatedDays = q.EstimatedDays,
+                CreatedAt = q.CreatedAt,
                 Items = q.Items.Select(i => new QuotationItemResultDto
                 {
+                    QuotationItemId = i.QuotationItemId,
+                    QuotationId = i.QuotationId,
                     ProductId = i.ProductId,
                     UnitPrice = i.UnitPrice,
                     Available = i.Available

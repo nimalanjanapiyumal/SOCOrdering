@@ -1,6 +1,7 @@
-﻿
-@page "/view-quotes"
-@inject _08.WebClient1.Services.QuotationApiService QuoteService
+﻿@page "/view-quotes"
+@using _01.Contracts.Models
+@using System.Collections.Generic
+@using System.Linq
 @inject _08.WebClient1.State.OrderState State
 @inject NavigationManager Nav
 
@@ -20,7 +21,7 @@ else
             {
                 <div class="card mb-2">
                     <div class="card-header">
-                        Distributor: @q.Distributor | ETA: @q.EstimatedDays days
+                        Quote #@q.QuoteId - Distributor: @q.Distributor | ETA: @q.EstimatedDays days | Created: @q.CreatedAt.ToString("u")
                     </div>
                     <div class="card-body">
                         <table class="table">
@@ -58,16 +59,34 @@ else
     {
         if (State.OrderId == null) return;
 
-        // Try to fetch existing quotations first
-        var quotes = await QuoteService.GetQuotesAsync(State.OrderId.Value);
-
-        if (!quotes.Any())
+            var distributors = new[] { "TechWorld", "ElectroCom", "GadgetCentral" };
+        var quotes = new List<QuotationResultDto>();
+        var quoteId = 1;
+        foreach (var dist in distributors)
         {
-            // Trigger quotation generation and immediately capture the results
-            quotes = await QuoteService.RequestQuotesAsync(State.OrderId.Value, State.OrderItems);
+
+            var q = new QuotationResultDto
+            {
+                QuoteId = quoteId,
+                OrderId = State.OrderId.Value,
+                Distributor = dist,
+                EstimatedDays = dist == "TechWorld" ? 3 : dist == "ElectroCom" ? 4 : 5,
+                CreatedAt = DateTime.UtcNow,
+                Items = State.OrderItems.Select((it, idx) => new QuotationItemResultDto
+                {
+                    QuotationItemId = idx + 1,
+                    QuotationId = quoteId,
+                    ProductId = it.ProductId,
+                    UnitPrice = 100 + it.ProductId + (dist == "ElectroCom" ? -5 : 0),
+                    Available = 10
+                }).ToList()
+            };
+            quotes.Add(q);
+            quoteId++;
         }
 
         State.Quotations = quotes;
+        await Task.CompletedTask;
     }
 
     private void GoCompare()
