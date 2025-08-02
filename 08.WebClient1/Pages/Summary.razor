@@ -19,7 +19,14 @@ else
 
     <h5>Selections</h5>
     <table class="table">
-        <thead><tr><th>Product</th><th>Distributor</th><th>Qty</th><th>UnitPrice</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Distributor</th>
+                <th>Qty</th>
+                <th>UnitPrice</th>
+            </tr>
+        </thead>
         <tbody>
             @foreach (var s in State.Summary.Selections)
             {
