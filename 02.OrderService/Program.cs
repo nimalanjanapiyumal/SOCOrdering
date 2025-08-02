@@ -15,7 +15,22 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddHttpClient<IQuotationClient, QuotationClient>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:5002/"); // adjust to actual QuotationService URL/port
+    client.BaseAddress = new Uri("https://localhost:7063/"); // QuotationService
+});
+
+builder.Services.AddHttpClient<IComparisonClient, ComparisonClient>(client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7067/"); // ComparisonService
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
 });
 
 // Repository
@@ -31,6 +46,7 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 app.UseHttpsRedirection();
+app.UseCors("AllowAll");
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
