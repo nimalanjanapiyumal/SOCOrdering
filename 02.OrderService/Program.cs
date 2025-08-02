@@ -18,6 +18,11 @@ builder.Services.AddHttpClient<IQuotationClient, QuotationClient>(client =>
     client.BaseAddress = new Uri("https://localhost:5002/"); // adjust to actual QuotationService URL/port
 });
 
+builder.Services.AddHttpClient<IComparisonClient, ComparisonClient>(client =>
+{
+    client.BaseAddress = new Uri("https://localhost:5003/"); // adjust to actual ComparisonService URL/port
+});
+
 // Repository
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
