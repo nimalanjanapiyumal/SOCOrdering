@@ -57,12 +57,24 @@ else
     private async Task LoadQuotes()
     {
         if (State.OrderId == null) return;
+
+        // Try to fetch existing quotations first
         var quotes = await QuoteService.GetQuotesAsync(State.OrderId.Value);
+
         if (!quotes.Any())
         {
+            // Trigger quotation generation
             await QuoteService.RequestQuotesAsync(State.OrderId.Value, State.OrderItems);
-            quotes = await QuoteService.GetQuotesAsync(State.OrderId.Value);
+
+            // Poll the service for a short period until quotations are available
+            const int maxAttempts = 5;
+            for (int attempt = 0; attempt < maxAttempts && !quotes.Any(); attempt++)
+            {
+                await Task.Delay(1000);
+                quotes = await QuoteService.GetQuotesAsync(State.OrderId.Value);
+            }
         }
+
         State.Quotations = quotes;
     }
 
