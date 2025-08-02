@@ -18,13 +18,20 @@ namespace _02.OrderService.Controllers
         private readonly IMessageBus _bus;
         private readonly ILogger<OrderController> _logger;
         private readonly IQuotationClient _quotationClient;
+        private readonly IComparisonClient _comparisonClient;
 
-        public OrderController(IOrderRepository repo, IMessageBus bus, ILogger<OrderController> logger, IQuotationClient quotationClient)
+        public OrderController(
+            IOrderRepository repo,
+            IMessageBus bus,
+            ILogger<OrderController> logger,
+            IQuotationClient quotationClient,
+            IComparisonClient comparisonClient)
         {
             _repo = repo;
             _bus = bus;
             _logger = logger;
             _quotationClient = quotationClient;
+            _comparisonClient = comparisonClient;
         }
 
         [HttpPost]
@@ -48,7 +55,10 @@ namespace _02.OrderService.Controllers
             };
             await _quotationClient.RequestQuotesAsync(quoteRequest);
 
-            _logger.LogInformation("Created order {OrderId} and published QuotationRequested event.", orderId);
+            // Trigger comparison to validate quotes and move order forward
+            await _comparisonClient.CompareAsync(orderId);
+
+            _logger.LogInformation("Created order {OrderId} and initiated quotation comparison.", orderId);
 
             return CreatedAtAction(nameof(Get), new { id = orderId }, new { orderId });
         }
