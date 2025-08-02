@@ -58,6 +58,11 @@ else
     {
         if (State.OrderId == null) return;
         var quotes = await QuoteService.GetQuotesAsync(State.OrderId.Value);
+        if (!quotes.Any())
+        {
+            await QuoteService.RequestQuotesAsync(State.OrderId.Value, State.OrderItems);
+            quotes = await QuoteService.GetQuotesAsync(State.OrderId.Value);
+        }
         State.Quotations = quotes;
     }
 
