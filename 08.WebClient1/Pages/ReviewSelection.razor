@@ -1,11 +1,12 @@
-﻿@page "/review-selection"
-@using _08.WebClient1.Shared
-@inject _08.WebClient1.Services.ComparisonApiService ComparisonService
-@inject _08.WebClient1.Services.NotificationApiService NotificationService
-@inject _08.WebClient1.Services.OrderApiService OrderService
+﻿
+@page "/review-selection"
+@using _01.Contracts.Models
+@using System.Linq
+@inject _08.WebClient1.Services.QuotationApiService QuoteService
 @inject _08.WebClient1.State.OrderState State
+@inject NavigationManager Nav
 
-<h3>Review & Finalize</h3>
+<h3>Review Quotes</h3>
 
 @if (State.OrderId == null)
 {
@@ -13,98 +14,87 @@
 }
 else
 {
-    <button class="btn btn-primary" @onclick="RunComparison">Run Comparison</button>
 
-    @if (State.Selections != null && State.Selections.Any())
-    {
-        <h5 class="mt-3">Selected Distribution</h5>
-        <table class="table">
-            <thead><tr><th>Product</th><th>Distributor</th><th>Qty</th><th>UnitPrice</th></tr></thead>
-            <tbody>
-                @foreach (var s in State.Selections)
-                {
-                    <tr>
-                        <td>@s.ProductId</td>
-                        <td>@s.Distributor</td>
-                        <td>@s.QuantityChosen</td>
-                        <td>@s.UnitPrice</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        if (options == null)
+        {
+            <div>Loading...</div>
+        }
+        else
+        {
 
-        <button class="btn btn-success" @onclick="SendNotification">Notify Customer & Summary</button>
-    }
-}
+            <table class="table">
+                <thead>
+                    <tr><th>Select</th><th>Vendor</th><th>Total</th><th>ETA (days)</th></tr>
+                </thead>
+                <tbody>
+                        @foreach (var opt in options)
+                        {
+                            <tr>
+                                <td>
+                                    <input type="radio" name="vendor" @onchange="() => selected = opt" checked="@(selected == opt)" />
+                                </td>
+                                <td>@opt.Distributor</td>
+                                <td>@opt.TotalCost.ToString("C")</td>
+                                <td>@opt.EstimatedDays</td>
+                            </tr>
+                        }
+                </tbody>
+            </table>
 
-@if (!string.IsNullOrEmpty(Message))
-{
-    <div class="alert alert-info">@Message</div>
+            <button class="btn btn-success" disabled="@(selected == null)" @onclick="ConfirmSelection">Confirm Selection</button>
+        }
 }
 
 @code {
-    private string Message;
+    private List<VendorOption> options;
+    private VendorOption selected;
 
-    private async Task RunComparison()
+    protected override async Task OnInitializedAsync()
     {
-        if (State.OrderId == null) return;
-
-        var result = await ComparisonService.CompareAsync(State.OrderId.Value);
-        // Expecting the structure from comparison controller: { selections: [...] , orderId: ... }
-        // Dynamic parsing:
-        if (result is null) { Message = "Comparison failed."; return; }
-
-        // Extract selections via System.Text.Json or dynamic
-        var json = System.Text.Json.JsonSerializer.Serialize(result);
-        using var doc = System.Text.Json.JsonDocument.Parse(json);
-        if (doc.RootElement.TryGetProperty("selections", out var sels))
-        {
-            var list = new List<_01.Contracts.Models.SelectionDto>();
-            foreach (var el in sels.EnumerateArray())
-            {
-                list.Add(new _01.Contracts.Models.SelectionDto
-                {
-                    ProductId = el.GetProperty("productId").GetInt32(),
-                    Distributor = el.GetProperty("distributor").GetString(),
-                    UnitPrice = el.GetProperty("unitPrice").GetDecimal(),
-                    QuantityChosen = el.GetProperty("quantityChosen").GetInt32()
-                });
-            }
-            State.Selections = list;
-            Message = "Comparison done.";
-        }
+        await LoadOptions();
     }
 
-    private async Task SendNotification()
+    private async Task LoadOptions()
     {
-        if (State.OrderId == null || State.CustomerId == null) return;
-        if (State.Selections == null || !State.Selections.Any()) return;
-
-        var selectionDtos = new List<_01.Contracts.Models.ProductSelectionDto>();
-        foreach (var s in State.Selections)
+        if (State.OrderId == null) return;
+        if (State.Quotations == null || !State.Quotations.Any())
         {
-            selectionDtos.Add(new _01.Contracts.Models.ProductSelectionDto
-            {
-                ProductId = s.ProductId,
-                Distributor = s.Distributor,
-                UnitPrice = s.UnitPrice,
-                QuantityChosen = s.QuantityChosen,
-                EstimatedDeliveryDays = 0
-            });
+            var quotes = await QuoteService.GetQuotesAsync(State.OrderId.Value);
+            State.Quotations = quotes;
         }
-
-        var notify = new _01.Contracts.Models.NotificationRequestDto
+        options = State.Quotations.Select(q => new VendorOption
         {
-            OrderId = State.OrderId.Value,
-            CustomerId = State.CustomerId.Value,
-            Email = "customer@example.com",
-            Selections = selectionDtos
+            Distributor = q.Distributor,
+            EstimatedDays = q.EstimatedDays,
+            TotalCost = q.Items.Sum(i => i.UnitPrice * (State.OrderItems.First(it => it.ProductId == i.ProductId).Quantity))
+        })
+        .OrderBy(o => o.TotalCost)
+        .Take(3)
+        .ToList();
+    }
+
+    private void ConfirmSelection()
+    {
+        if (selected == null) return;
+        State.Summary = new OrderSummaryDto
+        {
+            OrderId = State.OrderId!.Value,
+            CustomerId = State.CustomerId!.Value,
+            Status = "Vendor Selected",
+            CreatedAt = DateTime.UtcNow,
+            Selections = Array.Empty<SelectionDto>(),
+            TotalCost = selected.TotalCost,
+            EstimatedDeliveryDays = selected.EstimatedDays,
+            SelectedVendor = selected.Distributor
         };
+        Nav.NavigateTo("/summary");
+    }
 
-        var ok = await NotificationService.SendAsync(notify);
-        Message = ok ? "Notification sent." : "Notification failed.";
 
-        // fetch summary
-        State.Summary = await OrderService.GetSummaryAsync(State.OrderId.Value);
+    private record VendorOption
+    {
+        public string Distributor { get; init; }
+        public decimal TotalCost { get; init; }
+        public int EstimatedDays { get; init; }
     }
 }

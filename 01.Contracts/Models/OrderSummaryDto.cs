@@ -13,5 +13,6 @@ namespace _01.Contracts.Models
         public IEnumerable<SelectionDto> Selections { get; set; }
         public decimal TotalCost { get; set; }
         public int EstimatedDeliveryDays { get; set; }
+        public string SelectedVendor { get; set; }
     }
 }

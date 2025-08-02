@@ -55,7 +55,8 @@ namespace _02.OrderService.Controllers
                 Status = order.Status,
                 Selections = Array.Empty<SelectionDto>(),
                 TotalCost = 0,
-                EstimatedDeliveryDays = 0
+                EstimatedDeliveryDays = 0,
+                SelectedVendor = string.Empty
             };
             return Ok(summary);
         }

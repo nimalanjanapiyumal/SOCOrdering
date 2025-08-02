@@ -3,6 +3,7 @@
 @inject _08.WebClient1.Services.OrderApiService OrderService
 @inject _08.WebClient1.State.OrderState State
 @inject NavigationManager Nav
+@using System.Linq
 
 <h3>Create Order</h3>
 
@@ -72,9 +73,15 @@
         {
             State.OrderId = orderId.Value;
             State.CustomerId = customerId;
+            State.OrderItems = Items.Select(i => new _01.Contracts.Models.OrderItemDto
+            {
+                ProductId = i.ProductId,
+                Quantity = i.Quantity
+            }).ToList();
             Nav.NavigateTo("/view-quotes");
         }
     }
 
     private record Product(int Id, string Name);
 }
+

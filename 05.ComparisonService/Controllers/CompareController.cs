@@ -130,7 +130,11 @@ namespace _05.ComparisonService.Controllers
                 Status = "Completed",
                 Selections = selectionDtos,
                 TotalCost = totalCost,
-                EstimatedDeliveryDays = 0 // could compute max ETA if available
+                EstimatedDeliveryDays = 0, // could compute max ETA if available
+                SelectedVendor = selectionDtos
+                    .GroupBy(s => s.Distributor)
+                    .OrderByDescending(g => g.Sum(x => x.QuantityChosen))
+                    .First().Key
             };
 
             // after saving selections
